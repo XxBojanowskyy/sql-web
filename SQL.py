@@ -1,7 +1,7 @@
 from flask import Flask, request, send_from_directory
 import sqlite3
 
-app = Flask(__name__, static_folder='.')
+app = Flask(__name__)
 
 def init_db():
     conn = sqlite3.connect("users.db")
