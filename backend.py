@@ -23,6 +23,10 @@ def init_db():
 
 init_db()
 
+@app.route("/")
+def index():
+    return send_from_directory(".", "index.html")
+
 @app.route("/xss")
 def xss_page():
     return send_from_directory(".", "XSS.html")
