@@ -23,7 +23,7 @@ def init_db():
 
 init_db()
 
-@app.route("/")
+@app.route("/sql")
 def index():
     return send_from_directory(".", "SQL.html")
 
