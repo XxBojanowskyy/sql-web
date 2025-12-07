@@ -24,11 +24,11 @@ def init_db():
 init_db()
 
 @app.route("/xss")
-def index():
+def xss_page():
     return send_from_directory(".", "XSS.html")
 
 @app.route("/sql")
-def index():
+def sql_page():
     return send_from_directory(".", "SQL.html")
 
 @app.route("/login", methods=["POST"])
