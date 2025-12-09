@@ -2,7 +2,7 @@
 <html lang="pl">
 <head>
 <meta charset="UTF-8">
-<title>CSRF</title>
+<title>CTF Bank – Przelew</title>
 
 <style>
     body {
@@ -38,20 +38,70 @@
         margin-bottom: 40px;
     }
 
-    .row { margin-bottom: 15px; font-size: 20px; }
-    .label { color: #9b9b9b; }
-    .value { color: #ffffff; font-weight: bold; }
+    .row {
+        margin-bottom: 15px;
+        font-size: 20px;
+    }
+
+    .label {
+        color: #9b9b9b;
+    }
+
+    .value {
+        color: #ffffff;
+        font-weight: bold;
+    }
+
+    input[type="text"],
+    input[type="number"] {
+        width: 100%;
+        padding: 10px;
+        margin-top: 5px;
+        margin-bottom: 20px;
+        background-color: #1e1e1e;
+        border: 1px solid #555;
+        border-radius: 6px;
+        color: #fff;
+        font-size: 16px;
+    }
+
+    button {
+        width: 100%;
+        padding: 12px;
+        background-color: #3a82f7;
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        font-size: 18px;
+        cursor: pointer;
+        transition: 0.2s;
+        margin-top: 10px;
+    }
+
+    button:hover {
+        background-color: #2466d1;
+    }
+
+    .refresh-btn {
+        background-color: #3a82f7;
+    }
+
+    .refresh-btn:hover {
+        background-color: #2466d1;
+    }
 </style>
 </head>
 <body>
 
 <div class="container">
 
-    <h1>Fake Bank</h1>
+    <h1>CTF Bank – Panel Użytkownika</h1>
 
     <div class="panel-box">
         <div class="row"><span class="label">Użytkownik:</span> <span class="value">User1</span></div>
         <div class="row"><span class="label">Saldo:</span> <span class="value" id="saldo">Ładowanie...</span></div>
+
+        <button id="refreshBtn" class="refresh-btn">Odśwież saldo</button>
     </div>
 
     <div class="transfer-box">
@@ -73,6 +123,7 @@
 <script>
     const saldoElement = document.getElementById("saldo");
 
+    // Funkcja pobiera saldo z backendu
     async function loadBalance() {
         const res = await fetch("/api/balance");
         const data = await res.json();
@@ -80,10 +131,16 @@
         return data.balance;
     }
 
-    // POBIERAMY SALDO PRZY STARcie
-    let saldo;
+    // Ładowanie przy starcie
+    let saldo = 0;
     loadBalance().then(b => saldo = b);
 
+    // Obsługa przycisku odświeżania
+    document.getElementById("refreshBtn").addEventListener("click", async () => {
+        saldo = await loadBalance();
+    });
+
+    // Obsługa przelewów
     document.getElementById("transferForm").addEventListener("submit", async function(e) {
         e.preventDefault();
 
@@ -106,13 +163,13 @@
         });
 
         const data = await res.json();
-        
+
         if (!data.success) {
             alert("Błąd backendu: " + data.error);
             return;
         }
 
-        // PO KAŻDYM PRZELEWIE — ponowne pobranie salda
+        // pobranie nowego salda
         saldo = await loadBalance();
 
         alert("Przelew wysłany!");
