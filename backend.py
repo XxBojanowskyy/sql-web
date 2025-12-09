@@ -98,3 +98,13 @@ def transfer():
     conn.close()
 
     return {"success": True, "new_balance": new_balance}
+    
+@app.route("/api/balance", methods=["GET"])
+def balance():
+    user = "User1"
+    conn = sqlite3.connect("users.db")
+    cur = conn.cursor()
+    cur.execute("SELECT balance FROM balances WHERE username=?", (user,))
+    row = cur.fetchone()
+    conn.close()
+    return {"balance": row[0]}
