@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>CTF Bank – Przelew</title>
+
+<style>
+    body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background-color: #1e1e1e;
+        color: #f0f0f0;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        padding-top: 160px;
+        min-height: 100vh;
+    }
+
+    .container {
+        text-align: center;
+        max-width: 700px;
+        width: 90%;
+    }
+
+    h1 {
+        font-size: 50px;
+        margin-bottom: 40px;
+        font-weight: bold;
+    }
+
+    .panel-box, .transfer-box {
+        background-color: #2a2a2a;
+        padding: 25px;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.4);
+        text-align: left;
+        margin-bottom: 40px;
+    }
+
+    .row {
+        margin-bottom: 15px;
+        font-size: 20px;
+    }
+
+    .label {
+        color: #9b9b9b;
+    }
+
+    .value {
+        color: #ffffff;
+        font-weight: bold;
+    }
+
+    input[type="text"],
+    input[type="number"] {
+        width: 100%;
+        padding: 10px;
+        margin-top: 5px;
+        margin-bottom: 20px;
+        background-color: #1e1e1e;
+        border: 1px solid #555;
+        border-radius: 6px;
+        color: #fff;
+        font-size: 16px;
+    }
+
+    button {
+        width: 100%;
+        padding: 12px;
+        background-color: #3a82f7;
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        font-size: 18px;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+
+    button:hover {
+        background-color: #2466d1;
+    }
+</style>
+</head>
+<body>
+
+    <div class="container">
+
+        <h1>CTF Bank – Panel Użytkownika</h1>
+
+        <div class="panel-box">
+            <div class="row"><span class="label">Użytkownik:</span> <span class="value">User1</span></div>
+            <div class="row"><span class="label">Saldo:</span> <span class="value" id="saldo">10</span></div>
+        </div>
+
+        <div class="transfer-box">
+            <h2 style="margin-top:0; margin-bottom: 30px;">Wykonaj przelew</h2>
+
+            <form id="transferForm">
+
+                <label>Numer konta odbiorcy</label>
+                <input type="text" name="to_account" placeholder="Username" required>
+
+                <label>Kwota</label>
+                <input type="number" name="amount" min="0.01" step="0.01" placeholder="0.00" required>
+
+                <button type="submit">Wyślij przelew</button>
+            </form>
+        </div>
+
+    </div>
+
+<script>
+    const saldoElement = document.getElementById("saldo");
+    let saldo = parseFloat(saldoElement.textContent);
+
+    document.getElementById("transferForm").addEventListener("submit", async function(e) {
+        e.preventDefault();
+
+        const toAccount = this.to_account.value.trim();
+        const amount = parseFloat(this.amount.value);
+
+        if (amount > saldo) {
+            alert("Błąd: Niewystarczająca ilość pieniędzy.");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append("from_user", "User1");
+        formData.append("to_user", toAccount);
+        formData.append("amount", amount);
+
+        const res = await fetch("/api/transfer", {
+            method: "POST",
+            body: formData
+        });
+
+        const data = await res.json();
+
+        if (!data.success) {
+            alert("Błąd backendu: " + data.error);
+            return;
+        }
+
+        // backend zaakceptował przelew → aktualizujemy lokalne saldo
+        saldo -= amount;
+        saldoElement.textContent = saldo.toFixed(2);
+
+        alert("Przelew wysłany!");
+        this.reset();
+    });
+</script>
+
+</body>
+</html>
