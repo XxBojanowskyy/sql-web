@@ -14,10 +14,10 @@ def init_db():
     """)
     conn.commit()
 
-    cur.execute("SELECT * FROM users WHERE username = 'admin'")
-    if not cur.fetchone():
-        cur.execute("INSERT INTO users (username, password) VALUES (?, ?)", ("admin", "admin123"))
-        conn.commit()
+    cur.execute("CREATE TABLE IF NOT EXISTS balances (username TEXT PRIMARY KEY, balance REAL)")
+    cur.execute("INSERT OR IGNORE INTO balances VALUES ('admin', 1000)")
+    cur.execute("INSERT OR IGNORE INTO balances VALUES ('User1', 10)")
+    conn.commit()
 
     conn.close()
 
@@ -35,6 +35,10 @@ def xss_page():
 def sql_page():
     return send_from_directory(".", "SQL.html")
 
+@app.route("/csrf")
+def csrf_page():
+    return send_from_directory(".", "CSRF.html")
+
 @app.route("/login", methods=["POST"])
 def login():
     username = request.form.get("username")
@@ -43,16 +47,9 @@ def login():
     conn = sqlite3.connect("users.db")
     cur = conn.cursor()
 
-    # CELOWA luka SQL injection
     query = f"SELECT * FROM users WHERE username='{username}' AND password='{password}'"
-    print("SQL:", query)
-
-    try:
-        cur.execute(query)
-        user = cur.fetchone()
-    except Exception as e:
-        return f"Błąd SQL: {e}"
-
+    cur.execute(query)
+    user = cur.fetchone()
     conn.close()
 
     if user:
@@ -60,28 +57,16 @@ def login():
     else:
         return "Błędne dane logowania"
 
-@app.route("/csrf")
-def csrf_page():
-    return send_from_directory(".", "CSRF.html")
 
 @app.route("/api/transfer", methods=["POST"])
 def transfer():
     from_user = request.form.get("from_user")
-    to_user = request.form.get("to_user")
-    amount = float(request.form.get("amount", 0))
+    to_user   = request.form.get("to_user")
+    amount    = float(request.form.get("amount", 0))
 
     conn = sqlite3.connect("users.db")
     cur = conn.cursor()
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS balances (
-            username TEXT PRIMARY KEY,
-            balance REAL
-        )
-    """)
-    cur.execute("INSERT OR IGNORE INTO balances (username, balance) VALUES ('admin', 1000)")
-    cur.execute("INSERT OR IGNORE INTO balances (username, balance) VALUES ('User1', 10)")
 
-    # pobieramy saldo
     cur.execute("SELECT balance FROM balances WHERE username=?", (from_user,))
     row = cur.fetchone()
     if not row:
@@ -94,10 +79,23 @@ def transfer():
         conn.close()
         return {"success": False, "error": "Invalid amount"}
 
-    # wykonujemy przelew
     cur.execute("UPDATE balances SET balance = balance - ? WHERE username=?", (amount, from_user))
     cur.execute("UPDATE balances SET balance = balance + ? WHERE username=?", (amount, to_user))
     conn.commit()
     conn.close()
 
     return {"success": True, "from_user": from_user, "to_user": to_user, "amount": amount}
+
+
+@app.route("/api/get_balance")
+def get_balance():
+    user = request.args.get("user")
+    conn = sqlite3.connect("users.db")
+    cur = conn.cursor()
+    cur.execute("SELECT balance FROM balances WHERE username=?", (user,))
+    row = cur.fetchone()
+    conn.close()
+
+    if row:
+        return {"balance": row[0]}
+    return {"balance": None}
