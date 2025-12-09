@@ -59,3 +59,41 @@ def login():
         return "Zalogowano poprawnie! Flaga to: CTF{SQL_Injection}"
     else:
         return "Błędne dane logowania"
+
+@app.route("/api/transfer", methods=["POST"])
+def transfer():
+    from_user = request.form.get("from_user")
+    to_user = request.form.get("to_user")
+    amount = float(request.form.get("amount", 0))
+
+    conn = sqlite3.connect("users.db")
+    cur = conn.cursor()
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS balances (
+            username TEXT PRIMARY KEY,
+            balance REAL
+        )
+    """)
+    cur.execute("INSERT OR IGNORE INTO balances (username, balance) VALUES ('admin', 1000)")
+    cur.execute("INSERT OR IGNORE INTO balances (username, balance) VALUES ('User1', 10)")
+
+    # pobieramy saldo
+    cur.execute("SELECT balance FROM balances WHERE username=?", (from_user,))
+    row = cur.fetchone()
+    if not row:
+        conn.close()
+        return {"success": False, "error": "User not found"}
+
+    saldo = row[0]
+
+    if amount <= 0 or amount > saldo:
+        conn.close()
+        return {"success": False, "error": "Invalid amount"}
+
+    # wykonujemy przelew
+    cur.execute("UPDATE balances SET balance = balance - ? WHERE username=?", (amount, from_user))
+    cur.execute("UPDATE balances SET balance = balance + ? WHERE username=?", (amount, to_user))
+    conn.commit()
+    conn.close()
+
+    return {"success": True, "from_user": from_user, "to_user": to_user, "amount": amount}
