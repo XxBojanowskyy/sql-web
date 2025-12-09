@@ -15,7 +15,7 @@ def init_db():
     conn.commit()
 
     cur.execute("CREATE TABLE IF NOT EXISTS balances (username TEXT PRIMARY KEY, balance REAL)")
-    cur.execute("INSERT OR IGNORE INTO balances VALUES ('admin', 1000)")
+    cur.execute("INSERT OR IGNORE INTO balances VALUES ('admin', 100000)")
     cur.execute("INSERT OR IGNORE INTO balances VALUES ('User1', 10)")
     conn.commit()
 
