@@ -60,6 +60,10 @@ def login():
     else:
         return "Błędne dane logowania"
 
+@app.route("/csrf")
+def csrf_page():
+    return send_from_directory(".", "CSRF.html")
+
 @app.route("/api/transfer", methods=["POST"])
 def transfer():
     from_user = request.form.get("from_user")
