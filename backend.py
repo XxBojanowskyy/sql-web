@@ -61,52 +61,40 @@ def login():
 @app.route("/api/transfer", methods=["POST"])
 def transfer():
     from_user = request.form.get("from_user")
-    to_user   = request.form.get("to_user")
-    amount    = float(request.form.get("amount", 0))
+    to_user = request.form.get("to_user")
+    amount = float(request.form.get("amount"))
 
     conn = sqlite3.connect("users.db")
     cur = conn.cursor()
 
+    # Pobierz saldo użytkownika wykonującego przelew
     cur.execute("SELECT balance FROM balances WHERE username=?", (from_user,))
     row = cur.fetchone()
+
     if not row:
-        conn.close()
-        return {"success": False, "error": "User not found"}
+        return {"success": False, "error": "Nadawca nie istnieje"}
 
-    saldo = row[0]
+    balance = row[0]
 
-    if amount <= 0 or amount > saldo:
-        conn.close()
-        return {"success": False, "error": "Invalid amount"}
+    # Sprawdź czy ma wystarczające środki
+    if balance < amount:
+        return {"success": False, "error": "Brak środków"}
 
-    cur.execute("UPDATE balances SET balance = balance - ? WHERE username=?", (amount, from_user))
-    cur.execute("UPDATE balances SET balance = balance + ? WHERE username=?", (amount, to_user))
+    # Odejmij środki
+    new_balance = balance - amount
+    cur.execute("UPDATE balances SET balance=? WHERE username=?", (new_balance, from_user))
+
+    # Dodaj środki odbiorcy
+    cur.execute("SELECT balance FROM balances WHERE username=?", (to_user,))
+    row = cur.fetchone()
+
+    if row:
+        cur.execute("UPDATE balances SET balance = balance + ? WHERE username=?", (amount, to_user))
+    else:
+        # Jeśli odbiorca nie istnieje → utwórz go
+        cur.execute("INSERT INTO balances (username, balance) VALUES (?, ?)", (to_user, amount))
+
     conn.commit()
     conn.close()
 
-    return {"success": True, "from_user": from_user, "to_user": to_user, "amount": amount}
-
-
-@app.route("/api/get_balance")
-def get_balance():
-    user = request.args.get("user")
-    conn = sqlite3.connect("users.db")
-    cur = conn.cursor()
-    cur.execute("SELECT balance FROM balances WHERE username=?", (user,))
-    row = cur.fetchone()
-    conn.close()
-
-    if row:
-        return {"balance": row[0]}
-    return {"balance": None}
-    
-@app.route("/api/balance/<user>")
-def balance(user):
-    conn = sqlite3.connect("users.db")
-    cur = conn.cursor()
-    cur.execute("SELECT balance FROM balances WHERE username=?", (user,))
-    row = cur.fetchone()
-    conn.close()
-    if not row:
-        return {"error": "not found"}
-    return {"balance": row[0]}
+    return {"success": True, "new_balance": new_balance}
