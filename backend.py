@@ -66,46 +66,51 @@ def transfer():
     conn = sqlite3.connect("users.db")
     cur = conn.cursor()
 
-    # Pobranie balansu odbiorcy przed
+    # Sprawdzenie czy odbiorca istnieje
     cur.execute("SELECT balance FROM balances WHERE username=?", (to_user,))
-    before = cur.fetchone()
-    if not before:
-        return {"success": False, "error": "Nie ma takiego odbiorcy"}
-    before_balance = before[0]
+    to_row = cur.fetchone()
+    if not to_row:
+        conn.close()
+        return {"success": False, "error": "Odbiorca nie istnieje"}
 
-    # pobranie balansu nadawcy
+    # Sprawdzenie czy nadawca istnieje
     cur.execute("SELECT balance FROM balances WHERE username=?", (from_user,))
-    result = cur.fetchone()
-    if not result:
-        return {"success": False, "error": "Nie ma takiego użytkownika"}
+    from_row = cur.fetchone()
+    if not from_row:
+        conn.close()
+        return {"success": False, "error": "Nadawca nie istnieje"}
 
-    balance = result[0]
+    from_balance = from_row[0]
 
-    if balance < amount:
+    # Za mało kasy
+    if from_balance < amount:
+        conn.close()
         return {"success": False, "error": "Brak środków"}
 
-    # wykonanie przelewu
+    # Wykonanie przelewu
     cur.execute("UPDATE balances SET balance = balance - ? WHERE username=?", (amount, from_user))
     cur.execute("UPDATE balances SET balance = balance + ? WHERE username=?", (amount, to_user))
     conn.commit()
 
-    # Pobranie balansu odbiorcy po
+    # Pobranie nowego balansu odbiorcy
     cur.execute("SELECT balance FROM balances WHERE username=?", (to_user,))
     after_balance = cur.fetchone()[0]
 
     conn.close()
 
-    # CSRF – wykrycie przelewu admina na konto User1
-if from_user == "admin" and to_user == "User1":
-    return {
-        success=True,
-        flag="CTF{CSRF_balance_increase_detected}",
-        new_balance=after_balance
+    # CSRF — admin → User1
+    if from_user == "admin" and to_user == "User1":
+        return {
+            "success": True,
+            "flag": "CTF{To_Jest_CSRF}",
+            "new_balance": after_balance
         }
 
+    return {
+        "success": True,
+        "new_balance": after_balance
+    }
 
-    return {"success": True, "new_balance": after_balance}
-    
 @app.route("/api/balance", methods=["GET"])
 def balance():
     user = "User1"
