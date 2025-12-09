@@ -99,3 +99,14 @@ def get_balance():
     if row:
         return {"balance": row[0]}
     return {"balance": None}
+    
+@app.route("/api/balance/<user>")
+def balance(user):
+    conn = sqlite3.connect("users.db")
+    cur = conn.cursor()
+    cur.execute("SELECT balance FROM balances WHERE username=?", (user,))
+    row = cur.fetchone()
+    conn.close()
+    if not row:
+        return {"error": "not found"}
+    return {"balance": row[0]}
