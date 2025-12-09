@@ -2,7 +2,8 @@
 <html lang="pl">
 <head>
 <meta charset="UTF-8">
-<title>CSRF</title>
+<title>CTF Bank – Przelew</title>
+
 <style>
     body {
         margin: 0;
@@ -83,52 +84,40 @@
 </head>
 <body>
 
-<div class="container">
+    <div class="container">
 
-    <h1>Fake Bank</h1>
+        <h1>CTF Bank – Panel Użytkownika</h1>
 
-    <div class="panel-box">
-        <div class="row"><span class="label">Użytkownik:</span> <span class="value">User1</span></div>
-        <div class="row"><span class="label">Saldo:</span> <span class="value" id="saldo">0</span></div>
+        <div class="panel-box">
+            <div class="row"><span class="label">Użytkownik:</span> <span class="value">User1</span></div>
+            <div class="row"><span class="label">Saldo:</span> <span class="value" id="saldo">10</span></div>
+        </div>
+
+        <div class="transfer-box">
+            <h2 style="margin-top:0; margin-bottom: 30px;">Wykonaj przelew</h2>
+
+            <form id="transferForm">
+
+                <label>Numer konta odbiorcy</label>
+                <input type="text" name="to_account" placeholder="Admin" required>
+
+                <label>Kwota</label>
+                <input type="number" name="amount" min="0.01" step="0.01" placeholder="100" required>
+
+                <button type="submit">Wyślij przelew</button>
+            </form>
+        </div>
+
     </div>
-
-    <div class="transfer-box">
-        <h2 style="margin-top:0; margin-bottom: 30px;">Wykonaj przelew</h2>
-
-        <form id="transferForm">
-            <label>Numer konta odbiorcy</label>
-            <input type="text" name="to_account" placeholder="admin" required>
-
-            <label>Kwota</label>
-            <input type="number" name="amount" min="0.01" step="0.01" placeholder="100" required>
-
-            <button type="submit">Wyślij przelew</button>
-        </form>
-    </div>
-
-</div>
 
 <script>
     const saldoElement = document.getElementById("saldo");
-    let saldo = 0;
-    const currentUser = "User1"; // zmień jeśli użytkownik się loguje dynamicznie
-
-    async function refreshBalance() {
-        const res = await fetch(`/api/get_balance?user=${currentUser}`);
-        const data = await res.json();
-        if (data.balance !== null) {
-            saldo = parseFloat(data.balance);
-            saldoElement.textContent = saldo.toFixed(2);
-        }
-    }
-
-    // Pobieramy saldo przy ładowaniu strony
-    refreshBalance();
+    let saldo = parseFloat(saldoElement.textContent);
 
     document.getElementById("transferForm").addEventListener("submit", async function(e) {
         e.preventDefault();
 
-        const toAccount = this.to_account.value.trim().toLowerCase(); // lowercase dla bezpieczeństwa
+        const toAccount = this.to_account.value.trim();
         const amount = parseFloat(this.amount.value);
 
         if (amount > saldo) {
@@ -137,7 +126,7 @@
         }
 
         const formData = new FormData();
-        formData.append("from_user", currentUser.toLowerCase());
+        formData.append("from_user", "User1");
         formData.append("to_user", toAccount);
         formData.append("amount", amount);
 
@@ -153,12 +142,14 @@
             return;
         }
 
-        // odśwież saldo z backendu
-        await refreshBalance();
+        saldo -= amount;
+        saldoElement.textContent = saldo.toFixed(2);
+
         alert("Przelew wysłany!");
         this.reset();
     });
 </script>
 
 </body>
+
 </html>
