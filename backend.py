@@ -57,7 +57,6 @@ def login():
     else:
         return "Błędne dane logowania"
 
-
 @app.route("/api/transfer", methods=["POST"])
 def transfer():
     from_user = request.form.get("from_user")
@@ -67,37 +66,45 @@ def transfer():
     conn = sqlite3.connect("users.db")
     cur = conn.cursor()
 
-    # Pobierz saldo użytkownika wykonującego przelew
+    # Pobranie balansu odbiorcy przed
+    cur.execute("SELECT balance FROM balances WHERE username=?", (to_user,))
+    before = cur.fetchone()
+    if not before:
+        return {"success": False, "error": "Nie ma takiego odbiorcy"}
+    before_balance = before[0]
+
+    # pobranie balansu nadawcy
     cur.execute("SELECT balance FROM balances WHERE username=?", (from_user,))
-    row = cur.fetchone()
+    result = cur.fetchone()
+    if not result:
+        return {"success": False, "error": "Nie ma takiego użytkownika"}
 
-    if not row:
-        return {"success": False, "error": "Nadawca nie istnieje"}
+    balance = result[0]
 
-    balance = row[0]
-
-    # Sprawdź czy ma wystarczające środki
     if balance < amount:
         return {"success": False, "error": "Brak środków"}
 
-    # Odejmij środki
-    new_balance = balance - amount
-    cur.execute("UPDATE balances SET balance=? WHERE username=?", (new_balance, from_user))
-
-    # Dodaj środki odbiorcy
-    cur.execute("SELECT balance FROM balances WHERE username=?", (to_user,))
-    row = cur.fetchone()
-
-    if row:
-        cur.execute("UPDATE balances SET balance = balance + ? WHERE username=?", (amount, to_user))
-    else:
-        # Jeśli odbiorca nie istnieje → utwórz go
-        cur.execute("INSERT INTO balances (username, balance) VALUES (?, ?)", (to_user, amount))
-
+    # wykonanie przelewu
+    cur.execute("UPDATE balances SET balance = balance - ? WHERE username=?", (amount, from_user))
+    cur.execute("UPDATE balances SET balance = balance + ? WHERE username=?", (amount, to_user))
     conn.commit()
+
+    # Pobranie balansu odbiorcy po
+    cur.execute("SELECT balance FROM balances WHERE username=?", (to_user,))
+    after_balance = cur.fetchone()[0]
+
     conn.close()
 
-    return {"success": True, "new_balance": new_balance}
+    # CSRF – wykrycie przelewu admina na konto User1
+if from_user == "admin" and to_user == "User1":
+    return {
+        success=True,
+        flag="CTF{CSRF_balance_increase_detected}",
+        new_balance=after_balance
+        }
+
+
+    return {"success": True, "new_balance": after_balance}
     
 @app.route("/api/balance", methods=["GET"])
 def balance():
