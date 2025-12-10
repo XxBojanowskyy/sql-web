@@ -66,14 +66,14 @@ def transfer():
     conn = sqlite3.connect("users.db")
     cur = conn.cursor()
 
-    # Sprawdzenie czy odbiorca istnieje
+    # Sprawdzenie odbiorcy
     cur.execute("SELECT balance FROM balances WHERE username=?", (to_user,))
     to_row = cur.fetchone()
     if not to_row:
         conn.close()
         return {"success": False, "error": "Odbiorca nie istnieje"}
 
-    # Sprawdzenie czy nadawca istnieje
+    # Sprawdzenie nadawcy
     cur.execute("SELECT balance FROM balances WHERE username=?", (from_user,))
     from_row = cur.fetchone()
     if not from_row:
@@ -82,23 +82,30 @@ def transfer():
 
     from_balance = from_row[0]
 
-    # Za mało kasy
+    # Admin ma nieskończoną ilość środków
+    if from_user == "admin":
+        from_balance = float("inf")
+
+    # Za mało środków (admin przejdzie zawsze)
     if from_balance < amount:
         conn.close()
         return {"success": False, "error": "Brak środków"}
 
-    # Wykonanie przelewu
-    cur.execute("UPDATE balances SET balance = balance - ? WHERE username=?", (amount, from_user))
+    # Odejmij środki TYLKO zwykłym użytkownikom
+    if from_user != "admin":
+        cur.execute("UPDATE balances SET balance = balance - ? WHERE username=?", (amount, from_user))
+
+    # Dodaj środki odbiorcy
     cur.execute("UPDATE balances SET balance = balance + ? WHERE username=?", (amount, to_user))
+
     conn.commit()
 
-    # Pobranie nowego balansu odbiorcy
+    # Pobierz nowy balans odbiorcy
     cur.execute("SELECT balance FROM balances WHERE username=?", (to_user,))
     after_balance = cur.fetchone()[0]
-
     conn.close()
 
-    # CSRF — admin → User1
+    # CSRF flaga
     if from_user == "admin" and to_user == "User1":
         return {
             "success": True,
@@ -110,7 +117,6 @@ def transfer():
         "success": True,
         "new_balance": after_balance
     }
-
 @app.route("/api/balance", methods=["GET"])
 def balance():
     user = "User1"
