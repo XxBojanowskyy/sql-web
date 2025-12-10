@@ -81,7 +81,9 @@ def transfer():
         return {"success": False, "error": "Nadawca nie istnieje"}
 
     from_balance = from_row[0]
-
+    
+    from_user = request.form.get("from_user").strip().lower()
+    
     # Admin ma nieskończoną ilość środków
     if from_user == "admin":
         from_balance = float("inf")
