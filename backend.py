@@ -6,42 +6,30 @@ app = Flask(__name__)
 def init_db():
     conn = sqlite3.connect("users.db")
     cur = conn.cursor()
+
     cur.execute("""
         CREATE TABLE IF NOT EXISTS users (
             username TEXT PRIMARY KEY,
             password TEXT
         )
     """)
-    conn.commit()
 
-    def init_db():
-    conn = sqlite3.connect("users.db")
-    cur = conn.cursor()
     cur.execute("""
-        CREATE TABLE IF NOT EXISTS users (
+        CREATE TABLE IF NOT EXISTS balances (
             username TEXT PRIMARY KEY,
-            password TEXT
+            balance REAL
         )
     """)
-    conn.commit()
 
-    # ➜ DODAJ TO:
+    # Dodaj użytkowników
     cur.execute("INSERT OR IGNORE INTO users VALUES ('admin', 'admin123')")
+    cur.execute("INSERT OR IGNORE INTO users VALUES ('user1', 'test')")
 
-    cur.execute("CREATE TABLE IF NOT EXISTS balances (username TEXT PRIMARY KEY, balance REAL)")
+    # Dodaj balansy
     cur.execute("INSERT OR IGNORE INTO balances VALUES ('admin', 100000)")
     cur.execute("INSERT OR IGNORE INTO balances VALUES ('user1', 10)")
+
     conn.commit()
-
-    conn.close()
-
-    cur.execute("INSERT OR IGNORE INTO users VALUES ('admin', 'admin123')")
-    
-    cur.execute("CREATE TABLE IF NOT EXISTS balances (username TEXT PRIMARY KEY, balance REAL)")
-    cur.execute("INSERT OR IGNORE INTO balances VALUES ('admin', 100000)")
-    cur.execute("INSERT OR IGNORE INTO balances VALUES ('user1', 10)")
-    conn.commit()
-
     conn.close()
 
 init_db()
